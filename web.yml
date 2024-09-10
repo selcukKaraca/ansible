@@ -1,0 +1,47 @@
+---
+- name: install web server - play1
+  hosts: web_servers
+  remote_user: devops
+  become: true
+  vars:
+    web_pkg: httpd
+
+  tasks:
+  - name: install web pg
+    ansible.builtin.dnf:
+      name: "{{web_pkg}}"
+      state: installed
+
+  - name: copy a simple web page
+    ansible.builti.copy:
+      content: "welcome to {{ansible_facts['fqdn']}} "
+      dest: /var/www/html/index.html
+      owner: apache
+      mode: 0644
+
+  - name: enable firewall permissions
+    ansible.posix.firewalld:
+      service: http
+      state: enabled
+      permanent: true
+      immediate: true
+
+  - name: start and enable the service
+    ansible.builtin.service:
+      name: httpd
+      enabled: true
+      state: started
+
+
+- name: test web server - play2
+  hosts: localhost
+  become: false
+
+  tasks:
+  - name: tes web page OK
+    uri:
+      url: http://servera.lab.example.com
+      return_content: true
+      status_code: 200
+    register: web_page
+    failed_when: web_page.status !=200
